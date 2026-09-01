@@ -61,7 +61,9 @@ async function fetchFromCustomUrl(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CUSTOM_SOURCE_FETCH_TIMEOUT_MS);
 
-  let response: Response;
+  // `Response` above refers to the express Response imported for the route
+  // handlers, so derive the fetch type instead of naming the global directly.
+  let response: Awaited<ReturnType<typeof fetch>>;
   try {
     response = await fetch(`${fetchUrl}?projectId=${encodeURIComponent(String(projectId))}`, {
       method: "GET",
@@ -116,7 +118,7 @@ router.post("/", (req: Request, res: Response) => {
   }
 
   try {
-    // eslint-disable-next-line no-new
+     
     new URL(fetchUrl);
   } catch {
     return res.status(400).json({ error: "fetchUrl must be a valid URL" });
