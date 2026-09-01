@@ -18,7 +18,10 @@ describe("Environment Config Module (Issue #272)", () => {
       process.env.PROJECT_REGISTRY_CONTRACT_ID = "C1234567890";
 
       expect(() => validateRequiredEnv()).not.toThrow();
-      const env = initEnv();
+      // config snapshots env vars at import time, so reload it after setting them.
+      jest.resetModules();
+      const fresh = jest.requireActual<typeof import("../config")>("../config");
+      const env = fresh.initEnv();
       expect(env).toBeDefined();
       expect(env.ADMIN_SECRET_KEY).toBe("test-secret-key");
       expect(env.PROJECT_REGISTRY_CONTRACT_ID).toBe("C1234567890");

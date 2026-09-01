@@ -60,10 +60,13 @@ export async function getTotalProjects(): Promise<number> {
     try {
       const result = await client.simulateTransaction(tx);
       if ("error" in result) throw new Error((result as { error: string }).error);
-      const sim = result as rpc.Api.SimulateTransactionSuccessResponse;
       end();
       stellarRpcTotal.inc({ operation: "simulateTransaction", result: "success" });
-      return Number(scValToNative(sim.result!.retval));
+      const retval = result.result?.retval;
+      if (retval === undefined) {
+        throw new Error("total_projects simulation returned no result value");
+      }
+      return Number(scValToNative(retval));
     } catch (err) {
       end();
       stellarRpcTotal.inc({ operation: "simulateTransaction", result: "failure" });

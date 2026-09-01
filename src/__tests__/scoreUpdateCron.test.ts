@@ -74,6 +74,7 @@ jest.mock("../config", () => ({
 }));
 
 import { runHourlyScoreUpdate } from "../lib/scoreUpdateCron";
+import { resetIdempotencyState } from "../lib/scoreService";
 import { getTotalProjects, updateImpactScore, RpcDegradedError } from "../lib/registry";
 import { getSolarData } from "../lib/iot";
 import { fetchSatelliteWithFallback } from "../lib/satellite-sources";
@@ -84,6 +85,7 @@ import { markFailed } from "../lib/duplicate-detection";
 describe("runHourlyScoreUpdate (cron job execution flow)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetIdempotencyState();
     (getSolarData as jest.Mock).mockReturnValue({
       efficiency_pct: 85,
       power_output_kw: 500,
