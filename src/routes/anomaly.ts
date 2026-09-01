@@ -7,7 +7,7 @@ import {
   AnomalyConfig,
 } from "../lib/anomaly";
 import { getSolarData, getSatelliteData } from "./iot";
-import { parseProjectId } from "../middleware/errors";
+import { parseProjectId, badRequest } from "../middleware/errors";
 
 const router = Router();
 
@@ -25,8 +25,20 @@ router.get("/:id", (req: Request, res: Response, next: NextFunction) => {
     const satellite = getSatelliteData(projectId);
 
     const config: Record<string, number> = {};
-    if (req.query.sensitivity) config.sensitivityZScore = Number(req.query.sensitivity);
-    if (req.query.window) config.trendWindowSize = Number(req.query.window);
+    if (req.query.sensitivity) {
+      const sensitivity = Number(req.query.sensitivity);
+      if (!Number.isFinite(sensitivity) || sensitivity <= 0) {
+        throw badRequest("sensitivity must be a finite positive number");
+      }
+      config.sensitivityZScore = sensitivity;
+    }
+    if (req.query.window) {
+      const window = Number(req.query.window);
+      if (!Number.isFinite(window) || window <= 0) {
+        throw badRequest("window must be a finite positive number");
+      }
+      config.trendWindowSize = window;
+    }
 
     const result = detectAnomalies(
       projectId,
