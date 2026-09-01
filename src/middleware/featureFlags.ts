@@ -19,10 +19,7 @@ import {
  * or x-user-id header. Adds helper methods to res.locals for use in route handlers.
  */
 export function featureFlagContext(req: Request, _res: Response, next: NextFunction): void {
-  const userId =
-    (req.headers["x-user-id"] as string) ||
-    (req.query.user_id as string) ||
-    undefined;
+  const userId = (req.headers["x-user-id"] as string) || (req.query.user_id as string) || undefined;
 
   const ctx: EvaluationContext = {
     user_id: userId,
@@ -56,7 +53,9 @@ export function getFeatureFlagContext(res: Response): EvaluationContext {
 }
 
 export function isFeatureEnabled(res: Response, flagName: string): boolean {
-  return ((res.locals as Record<string, unknown>).isFeatureEnabled as (name: string) => boolean)(flagName);
+  return ((res.locals as Record<string, unknown>).isFeatureEnabled as (name: string) => boolean)(
+    flagName,
+  );
 }
 
 // ── Admin API routes ────────────────────────────────────────────────────────
@@ -104,8 +103,8 @@ export function registerFlagRoutes(router: import("express").Router): void {
       }
       loadFlags(flagSet);
       res.json({ message: "Flags loaded", count: Object.keys(flagSet).length });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -119,8 +118,8 @@ export function registerFlagRoutes(router: import("express").Router): void {
       }
       mergeFlags(partial);
       res.json({ message: "Flags merged", count: Object.keys(partial).length });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 

@@ -231,8 +231,10 @@ app.put("/v1/admin/logging/level", ipWhitelist, adminLimiter, (req, res) => {
   try {
     setLogLevel(level as any);
     res.json({ level: getLogLevel(), message: "Log level updated successfully" });
-  } catch (err: any) {
-    res.status(400).json({ error: "invalid_level", message: err.message });
+  } catch (err) {
+    res
+      .status(400)
+      .json({ error: "invalid_level", message: err instanceof Error ? err.message : String(err) });
   }
 });
 
@@ -438,9 +440,11 @@ scheduleCron(
           key_ids: rotated.map((k) => k.id),
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       if (!isErrorRateLimited("cron:api-key-rotation")) {
-        logger.error("[cron] API key rotation check failed", { error: err?.message });
+        logger.error("[cron] API key rotation check failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
       recordCronRun("api-key-rotation", "error");
     }
@@ -542,8 +546,10 @@ async function gracefulShutdown(signal: string): Promise<void> {
     try {
       await rpcPool.shutdown();
       logger.info("[shutdown] connection pool drained");
-    } catch (err: any) {
-      logger.error("[shutdown] pool drain error", { error: err?.message });
+    } catch (err) {
+      logger.error("[shutdown] pool drain error", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     // 4. Stop the secret rotation timer so it doesn't keep the process alive
@@ -583,8 +589,10 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   try {
     await Promise.race([shutdownPromise, timeoutPromise]);
-  } catch (err: any) {
-    logger.error("[shutdown] forced exit", { error: err?.message });
+  } catch (err) {
+    logger.error("[shutdown] forced exit", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     process.exit(1);
   }
 }
