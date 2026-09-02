@@ -24,6 +24,12 @@ jobs:
           bun-version: "1.x"
 
       - name: Install dependencies
+        run: |
+          if [ -f bun.lock ]; then
+            bun install --frozen-lockfile
+          else
+            bun install
+          fi
         run: bun install
 
       - name: Check lockfiles are in sync

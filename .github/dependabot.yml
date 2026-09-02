@@ -14,6 +14,9 @@ updates:
       - dependency-type: "indirect"
     groups:
       security:
+        patterns:
+          - "*security*"
+          - "*cve*"
         # No dependency-types restriction: a security patch of a production
         # dependency (stellar-sdk, express, grpc-js, …) is usually higher
         # priority than a dev-only one and must be grouped here too.
@@ -31,3 +34,11 @@ updates:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
       include: "scope"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
