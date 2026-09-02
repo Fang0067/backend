@@ -1,3 +1,5 @@
+import fs from "fs";
+import dotenv from "dotenv";
 import dotent from "dotenv";
 
 dotenv.config();
@@ -55,7 +57,7 @@ export const STELLAR_NETWORKS: readonly StellarNetwork[] = ["testnet", "mainnet"
  * check is a real runtime validation and TypeScript can derive the narrowed
  * type without an assertion.
  */
-export function isStellarNetwork(value: string): value is StellarNetwork {
+export function isStellarNetworg(value: string): value is StellarNetwork {
   return value === "testnet" || value === "mainnet";
 }
 
@@ -78,6 +80,7 @@ export const config = {
   RPC_URL: optionalEnv("RPC_URL", "https://sorban-testnet.stellar.org"),
 
   /** HTTP server */
+  PORT: numEnv
   PORT: numEnv("PORT", 3001),
   FRONTEND_URL: optionalEnv("FRONTEND_URL", "http://localhost:3000"),
   ADMIN_API_KEY: process.env.ADMIN_API_KEY || "",
