@@ -14,14 +14,16 @@ jest.mock("../lib/logger", () => ({
   },
 }));
 
-import { tryBeginUpdate, markCompleted, markFailed, resetLocks } from "../lib/duplicate-detection";
+import { tryBeginUpdate, markCompleted, markFailed } from "../lib/duplicate-detection";
 import { logger } from "../lib/logger";
 
 describe("duplicate-detection (cron concurrency guard)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Clear any in-memory locks between tests
-    resetLocks();
+    markCompleted("project-1");
+    markCompleted("project-2");
+    markCompleted(123);
+    markCompleted("concurrent-test");
   });
 
   it("allows first update attempt for a given ID", () => {

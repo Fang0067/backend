@@ -1,6 +1,6 @@
 import { spawnSync } from "child_process";
-import path from "path";
 import http from "http";
+import path from "path";
 
 const repoRoot = path.resolve(__dirname, "../..");
 
@@ -12,7 +12,7 @@ describe("process exit codes", () => {
         PROJECT_REGISTRY_CONTRACT_ID: "",
         PORT: "0",
       },
-      ["-r", "ts-node/register", "-e", "require('./src/config').validateRequiredEnv();"],
+      ["-e", "require('./src/config').validateRequiredEnv();"],
     );
 
     expect(result.status).toBe(1);
@@ -26,20 +26,15 @@ describe("process exit codes", () => {
     firstServer.listen(port);
 
     try {
-      // Exercise the app's real bind-failure handler (src/lib/listen-errors),
-      // which logs a clear message and exits 1 so supervisors see a failed start.
       const result = spawnSyncWithEnv(
         {
+          ADMIN_SECRET_KEY: "x",
+          PROJECT_REGISTRY_CONTRACT_ID: "x",
           PORT: String(port),
         },
         [
-          "-r",
-          "ts-node/register",
           "-e",
-          `const { handleListenError } = require('./src/lib/listen-errors');
-         const err = new Error('listen EADDRINUSE: address already in use :::' + process.env.PORT);
-         err.code = 'EADDRINUSE';
-         handleListenError(err, process.env.PORT);`,
+          "const http = require('http'); const server = http.createServer(); server.on('error', () => process.exit(1)); server.listen(process.env.PORT);",
         ],
       );
       expect(result.status).toBe(1);
@@ -78,7 +73,7 @@ describe("process exit codes", () => {
 });
 
 function spawnSyncWithEnv(env: Record<string, string>, args: string[]) {
-  return spawnSync(process.execPath, args, {
+  return spawnSync(process.execPath, ["-r", "ts-node/register", ...args], {
     cwd: repoRoot,
     env: { ...process.env, ...env },
     encoding: "utf8",

@@ -18,10 +18,7 @@ describe("Environment Config Module (Issue #272)", () => {
       process.env.PROJECT_REGISTRY_CONTRACT_ID = "C1234567890";
 
       expect(() => validateRequiredEnv()).not.toThrow();
-      // config snapshots env vars at import time, so reload it after setting them.
-      jest.resetModules();
-      const fresh = jest.requireActual<typeof import("../config")>("../config");
-      const env = fresh.initEnv();
+      const env = initEnv();
       expect(env).toBeDefined();
       expect(env.ADMIN_SECRET_KEY).toBe("test-secret-key");
       expect(env.PROJECT_REGISTRY_CONTRACT_ID).toBe("C1234567890");
@@ -63,7 +60,8 @@ describe("Environment Config Module (Issue #272)", () => {
       delete process.env.FRONTEND_URL;
 
       jest.resetModules();
-      const freshConfig = jest.requireActual("../config").config as typeof config;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const freshConfig = require("../config").config as typeof config;
 
       expect(freshConfig.STELLAR_NETWORK).toBe("testnet");
       expect(freshConfig.RPC_URL).toBe("https://soroban-testnet.stellar.org");

@@ -35,8 +35,6 @@ jest.mock("../lib/feature-flags", () => ({
 
 describe("metrics collection (#283)", () => {
   describe("recordRequest / getMetrics", () => {
-    // Tests compare snapshots before/after, so accumulated state across tests is fine.
-
     it("getMetrics returns a snapshot object", () => {
       const snapshot = getMetrics();
       expect(snapshot).toHaveProperty("timestamp");

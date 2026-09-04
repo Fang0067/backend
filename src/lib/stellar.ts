@@ -1,5 +1,6 @@
 import { Keypair, rpc, Networks, TransactionBuilder, Account, xdr } from "@stellar/stellar-sdk";
 import { config } from "../config";
+import { logger } from "./logger";
 import { RpcConnectionPool } from "./db-pool";
 import { CircuitBreaker } from "./circuit-breaker";
 import { withRetry, isTransientError } from "./retry";
@@ -166,31 +167,31 @@ async function _attemptSubmit(
 
   const accountResponse = await client.getLedgerEntries(accountKey);
 
-  if (accountResponse.entries && accountResponse.entries.length > 0) {
-    const accountEntry = accountResponse.entries[0].val.account();
-    if (accountEntry) {
-      const onChainSequence = BigInt(accountEntry.seqNum().toString());
+  // Fetch the latest sequence from ledger state when available and use the
+  // higher of (chain, local tracker). A fresh or unregistered account returns
+  // no entry — fall back to the sequence the transaction was prepared with.
+  const firstEntry = accountResponse.entries?.[0];
+  if (firstEntry && firstEntry.val.type === "account") {
+    const onChainSequence = firstEntry.val.account.seqNum;
 
-      // Use the higher value between live ledger and local in-memory tracker
-      if (localSequenceTracker === null || onChainSequence > localSequenceTracker) {
-        localSequenceTracker = onChainSequence;
-      }
-
-      const targetSequence = (localSequenceTracker + 1n).toString();
-      const account = new Account(keypair.publicKey(), targetSequence);
-
-      const builder = new TransactionBuilder(account, {
-        fee: tx.fee,
-        networkPassphrase,
-        timebounds: tx.timeBounds || (tx.tx ? tx.tx.timeBounds : undefined),
-      });
-
-      for (const op of tx.operations) {
-        builder.addOperation(op);
-      }
-
-      tx = builder.build();
+    if (localSequenceTracker === null || onChainSequence > localSequenceTracker) {
+      localSequenceTracker = onChainSequence;
     }
+
+    const targetSequence = (localSequenceTracker + 1n).toString();
+    const account = new Account(keypair.publicKey(), targetSequence);
+
+    const builder = new TransactionBuilder(account, {
+      fee: tx.fee,
+      networkPassphrase,
+      timebounds: tx.timeBounds || (tx.tx ? tx.tx.timeBounds : undefined),
+    });
+
+    for (const op of tx.operations) {
+      builder.addOperation(op);
+    }
+
+    tx = builder.build();
   }
 
   tx.sign(keypair);

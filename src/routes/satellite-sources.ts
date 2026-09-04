@@ -118,7 +118,6 @@ router.post("/", (req: Request, res: Response) => {
   }
 
   try {
-     
     new URL(fetchUrl);
   } catch {
     return res.status(400).json({ error: "fetchUrl must be a valid URL" });

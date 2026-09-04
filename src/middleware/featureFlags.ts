@@ -94,7 +94,7 @@ export function registerFlagRoutes(router: import("express").Router): void {
   });
 
   // Replace all flags (admin only)
-  router.post("/flags/load", (req: Request, res: Response) => {
+  router.post("/flags/load", (req: Request, res: Response, next: NextFunction) => {
     try {
       const flagSet = req.body as FlagSet;
       if (!flagSet || typeof flagSet !== "object") {
@@ -104,12 +104,12 @@ export function registerFlagRoutes(router: import("express").Router): void {
       loadFlags(flagSet);
       res.json({ message: "Flags loaded", count: Object.keys(flagSet).length });
     } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      next(err);
     }
   });
 
   // Merge additional flags (admin only)
-  router.post("/flags/merge", (req: Request, res: Response) => {
+  router.post("/flags/merge", (req: Request, res: Response, next: NextFunction) => {
     try {
       const partial = req.body as FlagSet;
       if (!partial || typeof partial !== "object") {
@@ -119,7 +119,7 @@ export function registerFlagRoutes(router: import("express").Router): void {
       mergeFlags(partial);
       res.json({ message: "Flags merged", count: Object.keys(partial).length });
     } catch (err) {
-      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+      next(err);
     }
   });
 

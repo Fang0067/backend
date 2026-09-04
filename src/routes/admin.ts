@@ -1,7 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { getSolarData, getSatelliteData } from "./iot";
-import { computeScores } from "../lib/scoring";
-import { updateImpactScore, getTotalProjects } from "../lib/registry";
+import { getTotalProjects } from "../lib/registry";
 import { updateScoreForProject } from "../lib/scoreService";
 import { badRequest, errorBody, parseOptionalInt, MAX_PROJECT_ID } from "../middleware/errors";
 import { recordAudit, getAuditLog, auditToCsv } from "../lib/audit";
@@ -13,6 +11,37 @@ import { logger } from "../lib/logger";
 import { timingSafeCompare } from "../lib/timing-safe";
 
 const router = Router();
+
+const ADMIN_REQUEST_TIMEOUT_MS = Number(process.env.ADMIN_REQUEST_TIMEOUT_MS ?? 60000);
+const REQUEST_TIMEOUT_MS = Number(process.env.REQUEST_TIMEOUT_MS ?? 30000);
+
+export function requestTimeoutMiddleware(timeoutMs: number = REQUEST_TIMEOUT_MS) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    let timedOut = false;
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      if (!res.headersSent) {
+        res.status(408).json({
+          error: { code: "request_timeout", message: "Request timed out" },
+        });
+      } else {
+        req.destroy();
+      }
+    }, timeoutMs);
+
+    res.on("finish", () => {
+      clearTimeout(timer);
+      if (timedOut) {
+        req.destroy();
+      }
+    });
+    res.on("close", () => clearTimeout(timer));
+    next();
+  };
+}
+
+router.use(requestTimeoutMiddleware(ADMIN_REQUEST_TIMEOUT_MS));
 
 // Bearer token auth — enforced when ADMIN_API_KEY env var is set
 router.use((req: Request, res: Response, next: NextFunction) => {
@@ -91,6 +120,9 @@ function parseProjectIds(body: unknown): number[] | null {
     if (!isPositiveInteger(entry)) {
       throw badRequest("project_ids must contain only positive integers");
     }
+    if (entry > MAX_PROJECT_ID) {
+      throw badRequest(`project_ids must not exceed maximum project id ${MAX_PROJECT_ID}`);
+    }
     projectIds.push(entry);
   }
   if (!raw.every((n) => (n as number) <= MAX_PROJECT_ID)) {
@@ -151,6 +183,11 @@ router.post("/update-scores", async (req: Request, res: Response, next: NextFunc
             }
 
             if (scoreResult.status === "error") {
+              // Duplicate submissions are a normal condition, not a failure.
+              if (scoreResult.error.includes("duplicate submission rejected")) {
+                markCompleted(projectId);
+                return { skipped: true, reason: scoreResult.error };
+              }
               throw new Error(scoreResult.error);
             }
 

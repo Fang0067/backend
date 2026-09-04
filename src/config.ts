@@ -83,6 +83,13 @@ export const config = {
   ADMIN_API_KEY: process.env.ADMIN_API_KEY || "",
   WS_AUTH_TOKEN: process.env.WS_AUTH_TOKEN || "",
 
+  /** Database connection */
+  DB_HOST: optionalEnv("DB_HOST", "localhost"),
+  DB_PORT: numEnv("DB_PORT", 5432),
+  DB_NAME: optionalEnv("DB_NAME", ""),
+  DB_USER: optionalEnv("DB_USER", "postgres"),
+  DB_PASSWORD: optionalEnv("DB_PASSWORD", ""),
+
   /** Connection pool */
   DB_POOL_MIN: numEnv("DB_POOL_MIN", 2),
   DB_POOL_MAX: numEnv("DB_POOL_MAX", 10),
@@ -90,8 +97,14 @@ export const config = {
   DB_POOL_HEALTH_CHECK_INTERVAL_MS: numEnv("DB_POOL_HEALTH_CHECK_INTERVAL_MS", 30000),
 
   /** Circuit breaker */
-  RPC_BREAKER_FAILURE_THRESHOLD: numEnv("CIRCUIT_BREAKER_THRESHOLD", numEnv("RPC_BREAKER_FAILURE_THRESHOLD", 5)),
-  RPC_BREAKER_RECOVERY_TIMEOUT_MS: numEnv("CIRCUIT_BREAKER_COOLDOWN_MS", numEnv("RPC_BREAKER_RECOVERY_TIMEOUT_MS", 30000)),
+  RPC_BREAKER_FAILURE_THRESHOLD: numEnv(
+    "CIRCUIT_BREAKER_THRESHOLD",
+    numEnv("RPC_BREAKER_FAILURE_THRESHOLD", 5),
+  ),
+  RPC_BREAKER_RECOVERY_TIMEOUT_MS: numEnv(
+    "CIRCUIT_BREAKER_COOLDOWN_MS",
+    numEnv("RPC_BREAKER_RECOVERY_TIMEOUT_MS", 30000),
+  ),
 
   /** Transaction retries */
   TX_MAX_RETRIES: numEnv("TX_MAX_RETRIES", 4),
@@ -107,6 +120,9 @@ export const config = {
 
   /** IoT max power output (kW) */
   MAX_POWER_KW: numEnv("MAX_POWER_KW", 1000),
+
+  /** Idempotency */
+  IDEMPOTENCY_TTL_MS: numEnv("IDEMPOTENCY_TTL_MS", 3_600_000),
 
   /** Cron */
   CRON_TIMEZONE: optionalEnv("CRON_TIMEZONE", "UTC"),
@@ -171,5 +187,16 @@ export function validateRequiredEnv(): void {
  */
 export function initEnv() {
   validateRequiredEnv();
-  return config;
+  // Initialize API key roles from environment variables
+  // This must be called before any routes that use role-based auth
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { loadApiKeysFromEnv } = require("./lib/apiKeyRoles");
+  loadApiKeysFromEnv();
+
+  return {
+    ...config,
+    ADMIN_SECRET_KEY: process.env.ADMIN_SECRET_KEY || config.ADMIN_SECRET_KEY,
+    PROJECT_REGISTRY_CONTRACT_ID:
+      process.env.PROJECT_REGISTRY_CONTRACT_ID || config.PROJECT_REGISTRY_CONTRACT_ID,
+  };
 }
