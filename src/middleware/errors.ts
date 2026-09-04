@@ -63,7 +63,7 @@ export function parseProjectId(raw: string | string[] | undefined, field = "id")
   }
   const limit = maxProjectId();
   if (id > limit) {
-    throw badRequest(`${field} must be between 1 and ${limit}`);
+    throw badRequest(`${field} must be a positive integer not exceeding ${limit}`);
   }
   return id;
 }

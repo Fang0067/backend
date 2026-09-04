@@ -90,7 +90,7 @@ export async function getTotalProjects(): Promise<number> {
       }
       const retval = result.result?.retval;
       if (retval === undefined) {
-        throw new Error("Simulation result missing retval");
+        throw new Error("total_projects simulation returned no result value");
       }
       end();
       stellarRpcTotal.inc({ operation: "simulateTransaction", result: "success" });
