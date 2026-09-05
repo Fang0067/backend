@@ -7,6 +7,7 @@ import {
   registerSource,
 } from "../lib/satellite-sources";
 import { parseProjectId, badRequest } from "../middleware/errors";
+import { validatePublicUrl } from "../lib/ssrf";
 
 const router = Router();
 
@@ -58,6 +59,9 @@ async function fetchFromCustomUrl(
   projectId: number,
   sourceName: string,
 ): Promise<{ forest_density_pct: number; ndvi_score: number; timestamp: number; source: string }> {
+  // Re-validate immediately before sending to avoid DNS rebinding attacks after registration.
+  await validatePublicUrl(fetchUrl);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CUSTOM_SOURCE_FETCH_TIMEOUT_MS);
 
@@ -102,7 +106,7 @@ async function fetchFromCustomUrl(
  * Body: { name, priority, fetchUrl } — fetchUrl is the external endpoint
  * queried (via `?projectId=<id>`) for live satellite readings.
  */
-router.post("/", (req: Request, res: Response) => {
+router.post("/", async (req: Request, res: Response) => {
   const { name, priority, fetchUrl } = req.body as {
     name?: string;
     priority?: number;
@@ -117,10 +121,13 @@ router.post("/", (req: Request, res: Response) => {
     return res.status(400).json({ error: "fetchUrl is required" });
   }
 
+  // SSRF guard: only allow http/https URLs that resolve to public addresses.
   try {
-    new URL(fetchUrl);
-  } catch {
-    return res.status(400).json({ error: "fetchUrl must be a valid URL" });
+    await validatePublicUrl(fetchUrl);
+  } catch (err) {
+    return res
+      .status(400)
+      .json({ error: err instanceof Error ? err.message : "fetchUrl must be a valid URL" });
   }
 
   const sourcePriority = typeof priority === "number" ? priority : 99;
