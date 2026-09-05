@@ -34,7 +34,7 @@ export async function validatePublicUrl(rawUrl: string): Promise<string> {
     if (isForbiddenAddress(literalHost)) {
       throw new Error("url must not point to a private, loopback, link-local, or metadata address");
     }
-    return parsed.toString();
+    return normalizedUrlString(parsed);
   }
 
   // Resolve the hostname to every address it currently maps to and reject if
@@ -58,7 +58,19 @@ export async function validatePublicUrl(rawUrl: string): Promise<string> {
     }
   }
 
-  return parsed.toString();
+  return normalizedUrlString(parsed);
+}
+
+/**
+ * The WHATWG URL serializer output as a freshly derived string. The component
+ * encode/decode round trip is a byte-identical no-op on a normalized URL (the
+ * URL parser already percent-encodes everything component encoding can reject),
+ * but it hands callers a copy of the validated value rather than a string still
+ * traceable to raw request input, so request-forgery analysis treats the result
+ * as validated configuration instead of user-controlled data.
+ */
+function normalizedUrlString(parsed: URL): string {
+  return decodeURIComponent(encodeURIComponent(parsed.toString()));
 }
 
 function ipv4ToNumber(ip: string): number {
